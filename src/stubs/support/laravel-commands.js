@@ -111,13 +111,17 @@ Cypress.Commands.overwrite('visit', (originalFn, subject, options) => {
  *
  * @param {String} model
  * @param {Number|null} times
- * @param {Object} attributes
+ * @param {Object|null} attributes
+ * @param {Boolean|null} makeOnly
  *
  * @example cy.create('App\\User');
  *          cy.create('App\\User', 2);
  *          cy.create('App\\User', 2, { active: false });
  */
-Cypress.Commands.add('create', (model, times = 1, attributes = {}) => {
+Cypress.Commands.add('create', (model, times = 1, attributes = {}, makeOnly = false) => {
+    if (typeof attributes === "boolean") {
+        makeOnly = attributes
+    }
     if (typeof times === 'object') {
         attributes = times;
         times = 1;
@@ -129,15 +133,58 @@ Cypress.Commands.add('create', (model, times = 1, attributes = {}) => {
             return cy.request({
                 method: 'POST',
                 url: '/__cypress__/factory',
-                body: { attributes, model, times, _token: token },
+                body: { attributes, model, times, _token: token, makeOnly},
                 log: false,
             });
         })
         .then((response) => {
             Cypress.log({
-                name: 'create',
+                name: makeOnly ? 'make' : 'create',
                 message: model + (times ? `(${times} times)` : ''),
                 consoleProps: () => ({ [model]: response.body }),
+            });
+        })
+        .its('body', { log: false });
+});
+
+/**
+ * Create a new Eloquent factory.
+ *
+ * @param {String} model
+ * @param {Number|null} times
+ * @param {Object} attributes
+ *
+ * @example cy.make('App\\User');
+ *          cy.make('App\\User', 2);
+ *          cy.make('App\\User', 2, { active: false });
+ */
+Cypress.Commands.add('make', (model, times = 1, attributes = {}) => {
+    return cy.create(model, times, attributes, true)
+})
+
+/**
+ * Retrieve the email verification URL for a User.
+ *
+ * @param {Object} attributes that finds a User
+ *
+ * @example cy.emailVerificationUrl({ email: user@example.org });
+ */
+Cypress.Commands.add('emailVerificationUrl', (attributes) => {
+    return cy
+        .csrfToken()
+        .then((token) => {
+            return cy.request({
+                method: 'POST',
+                url: '/__cypress__/email_verification_url',
+                body: { attributes, _token: token },
+                log: false,
+            });
+        })
+        .then((response) => {
+            Cypress.log({
+                name: 'verify url',
+                message: response.body,
+                consoleProps: () => ({ url: response.body }),
             });
         })
         .its('body', { log: false });
