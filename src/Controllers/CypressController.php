@@ -56,9 +56,14 @@ class CypressController
 
     public function factory(Request $request)
     {
+        $action = 'create';
+        if ($request->input('makeOnly')) {
+            $action = 'make';
+        }
+
         $collection = $this->factoryBuilder($request->input('model'))
             ->times(intval($request->input('times', 1)))
-            ->create($request->input('attributes'))
+            ->$action($request->input('attributes'))
             ->each->setHidden([]);
 
         return $collection->count() > 1 ? $collection : $collection->first();
