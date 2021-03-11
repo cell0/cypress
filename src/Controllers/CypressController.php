@@ -106,13 +106,7 @@ class CypressController
         $user = app($this->userClassName())
             ->newQuery()
             ->where($attributes)
-            ->first();
-
-        if (!$user) {
-            $user = $this->factoryBuilder($this->userClassName())->create(
-                $attributes
-            );
-        }
+            ->firstOrFail();
 
         return URL::temporarySignedRoute(
             'verification.verify',
