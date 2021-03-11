@@ -3,7 +3,9 @@
 namespace Laracasts\Cypress\Controllers;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -90,6 +92,31 @@ class CypressController
         return response()->json([
             'result' => eval($code),
         ]);
+    }
+
+    public function emailVerificationUrl(Request $request)
+    {
+        $attributes = $request->input('attributes', []);
+
+        $user = app($this->userClassName())
+            ->newQuery()
+            ->where($attributes)
+            ->first();
+
+        if (!$user) {
+            $user = $this->factoryBuilder($this->userClassName())->create(
+                $attributes
+            );
+        }
+
+        return URL::temporarySignedRoute(
+            'verification.verify',
+            Carbon::now()->addMinutes(config('auth.verification.expire', 60)),
+            [
+                'id' => $user->getKey(),
+                'hash' => sha1($user->getEmailForVerification()),
+            ]
+        );
     }
 
     protected function userClassName()
